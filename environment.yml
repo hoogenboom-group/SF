@@ -5,4 +5,5 @@ channels:
 dependencies:
   - numpy
   - matplotlib
+  - voila
 prefix: /Applications/anaconda3/envs/sf
