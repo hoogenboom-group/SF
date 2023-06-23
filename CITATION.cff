@@ -1,0 +1,35 @@
+cff-version: 1.0.0
+title: Re-scaling factor online plotting tool
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Ernest Benjamin
+    name-particle: van der
+    family-names: Wee
+    email: e.b.vanderWee@tudelft.nl
+    affiliation: Delft University of Technology
+    orcid: 'https://orcid.org/0000-0002-0139-4019'  
+  - given-names: Daan Benjamin
+    family-names: Boltje
+    email: d.b.boltje@tudelft.nl
+    affiliation: Delft University of Technology
+    orcid: 'https://orcid.org/0000-0003-4881-4700'
+  - given-names: Sergey
+    family-names: Loginov
+    email: s.loginov@tudelft.nl
+    affiliation: Delft University of Technology
+version: 0.1
+repository: 'https://github.com/hoogenboom-group/SF'
+url: 'https://github.com/hoogenboom-group/SF'
+abstract: >-
+  An online interactive tool to plot the axial re-scaling 
+  factor versus imaging depth and compare to depth 
+  independent scaling theories.
+keywords:
+  - "axial scaling"
+  - "optical microscope"
+  - software
+license: CC-BY-4.0
+date-released: '2023-06-23'
