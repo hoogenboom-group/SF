@@ -31,18 +31,21 @@ app.layout = html.Div(
                 html.Div([ html.Br(),
                            html.Div([
                                html.Label("Show:"),
+                               html.Button('All', id='all-btn', n_clicks=0),
+                               html.Div([
+                               #html.Br(),
                                dcc.Checklist(options=[
-                                           {'label': 'All', 'value': 'ALL'},
                                            {'label': 'Focal shift', 'value': 'FS'},
                                            {'label': 'Carlsson', 'value': 'C'},
-                                           {'label': 'Visser', 'value': 'V'},
+                                           #{'label': 'Visser', 'value': 'V'},
                                            {'label': 'Diel (median)', 'value': 'DMED'},
                                            {'label': 'Diel (mean)', 'value': 'DMEA'},
                                            {'label': 'Stallinga', 'value': 'S'},
                                            {'label': 'Lyakin', 'value': 'L'},
                                           ],
-                                          value=['MTL'], id='checklist'
+                                          value=[], id='checklist'
                                ),
+                            ]),
                            ], className="four columns"),
                            html.Div([
                             html.Br(),
@@ -50,6 +53,8 @@ app.layout = html.Div(
                             dcc.Download(id="download-dataframe-csv"),
                             html.Div([html.Br(),
                             html.A(html.Button('Reset plot'),href='/')]),
+                            html.Div([html.Br(),
+                            html.A(html.Button("GitHub repository"), href="https://github.com/hoogenboom-group/SF", target="_blank")]),
                            ], className="four columns"),
                          ], className="rows"),
             ], className="five columns"),
@@ -184,6 +189,18 @@ def func(n_clicks, lamb, n1, n2, NA, chks):
     return dcc.send_data_frame(df.to_csv, "Re-scaling factor.csv")
 
 @app.callback(
+    Output('checklist', 'value'),
+    [Input('all-btn', 'n_clicks'),
+     State('checklist', 'value')
+    ],
+    prevent_initial_call=True
+)
+def update_output(n_clicks, chks):
+    all = ["FS", "C", "L", "DMED", "DMEA", "S"]
+    if set(all) == set(chks): return []
+    else: return all
+
+@app.callback(
     [Output("graph", "figure"),
      Output("na-slider", "max"),
     ],
@@ -193,7 +210,7 @@ def func(n_clicks, lamb, n1, n2, NA, chks):
     Input('na-slider', 'value'),
     Input('checklist', 'value')])
 def display_graph(lamb, n1, n2, NA, chks):
-    if "ALL" in chks: chks = ["FS", "C", "L", "DMED", "DMEA", "S", "V"]
+    #if "ALL" in chks: chks = ["FS", "C", "L", "DMED", "DMEA", "S", ] #"V"
     z, sf, sf_crit, n2overn1 = scaling_factor(NA, n1, n2, lamb)
     z = np.insert(z, 0, [0])
     sf = np.insert(sf, 0, [sf[0]])
@@ -221,18 +238,10 @@ def display_graph(lamb, n1, n2, NA, chks):
     
     yma2 = fs[190]
     
-    if "S" in chks and n2overn1 >= 1:
-        y = stallinga_high(z,n1,n2,[NA])
-        fig.add_trace(
-            go.Line(x=z, y=y, name="Stallinga (2005)"),
-            secondary_y=False,
-        )
-        ymi = min([ymi, y[0]])
-        yma = max([yma, y[0]])
     if "C" in chks:
         y = Carlsson(z,n2overn1)
         fig.add_trace(
-            go.Line(x=z, y=y, name="Carlsson (1991)"),
+            go.Scatter(x=z, y=y, name='Carlsson (1991)', line = dict(color='#ff7f0e')),
             secondary_y=False,
         )
         ymi = min([ymi, y[0]])
@@ -240,7 +249,7 @@ def display_graph(lamb, n1, n2, NA, chks):
     if "V" in chks and n2 > NA:
         y = visser(z,n2,n1,NA)
         fig.add_trace(
-            go.Line(x=z, y=y, name="Visser & Oud (1992)"),
+            go.Scatter(x=z, y=y, name='Visser & Oud (1992)', line = dict(color='#bcbd22')),
             secondary_y=False,
         )
         ymi = min([ymi, y[0]])
@@ -248,7 +257,7 @@ def display_graph(lamb, n1, n2, NA, chks):
     if "L" in chks:
         y = Lyakin(z,n2,n1,NA)
         fig.add_trace(
-            go.Line(x=z, y=y, name="Lyakin et al (2017)"),
+            go.Scatter(x=z, y=y, name='Lyakin et al (2017)', line = dict(color='#2ca02c')),
             secondary_y=False,
         )
         ymi = min([ymi, y[0]])
@@ -256,7 +265,7 @@ def display_graph(lamb, n1, n2, NA, chks):
     if "DMED" in chks:
         y = diel_median(z,n1,n2,NA)
         fig.add_trace(
-            go.Line(x=z, y=y, name="Diel et al (median, 2020)"),
+            go.Scatter(x=z, y=y, name='Diel et al (median, 2020)', line = dict(color='#d62728')),
             secondary_y=False,
         )
         ymi = min([ymi, y[0]])
@@ -264,7 +273,15 @@ def display_graph(lamb, n1, n2, NA, chks):
     if "DMEA" in chks and n2 > NA:
         y = diel_mean(z,n1,n2,NA)
         fig.add_trace(
-            go.Line(x=z, y=y, name="Diel et al (means, 2020)"),
+            go.Scatter(x=z, y=y, name='Diel et al (mean, 2020)', line = dict(color='#9467bd')),
+            secondary_y=False,
+        )
+        ymi = min([ymi, y[0]])
+        yma = max([yma, y[0]])
+    if "S" in chks and n2overn1 >= 1:
+        y = stallinga_high(z,n1,n2,[NA])
+        fig.add_trace(
+            go.Scatter(x=z, y=y, name='Stallinga (2005)', line = dict(color='#1f77b4', dash='dash')),
             secondary_y=False,
         )
         ymi = min([ymi, y[0]])
