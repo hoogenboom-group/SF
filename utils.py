@@ -29,9 +29,10 @@ __all__ = ['plot_overlay_panels',
 
 fire = psfe.get_Daans_special_cmap()
 
-def plot_overlay_panels(theories, stack, stack_rescaled,gt_stack, ps_xy, ps_z, ps_xy_gt, ps_z_gt,rescaled_ps_z,y_min=False,y_max=False ): 
+def plot_overlay_panels(theories, stack, stack_rescaled,gt_stack, ps_xy, ps_z, ps_xy_gt, ps_z_gt, rescaled_ps_z, y_min=False, y_max=False, x_min=False, x_max=False, direction = 'horizontal' ): 
     colormaps = ['gray','Purples']
-    fig,axs = plt.subplots(1,len(theories))
+    if direction == 'horizontal': fig,axs = plt.subplots(1,len(theories))
+    elif direction == 'vertical': fig,axs = plt.subplots(len(theories),1)
     fig.patch.set_facecolor('white')
     fig.set_figheight(15)
     fig.set_figwidth(20)
@@ -52,12 +53,14 @@ def plot_overlay_panels(theories, stack, stack_rescaled,gt_stack, ps_xy, ps_z, p
         # plot GT stack on each panel
         extent = [0, shape_gt[2]*ps_xy_gt, 0, shape_gt[0]*ps_z_gt]
         axs[i].imshow(np.max(gt_stack, axis=2),cmap=colormaps[1],extent=extent,alpha=0.5)
-        axs[i].set_xlim(0, shape_gt[2]*ps_xy_gt)
-      #  axs[i].set_xlim(110, 115)
+
+        #axs[i].set_xlim(0, shape_gt[2]*ps_xy_gt)
+        if x_max == False: axs[i].set_xlim(0, shape_gt[2]*ps_xy_gt)
+        else: axs[i].set_xlim(x_min, x_max)
+
         if y_max == False: axs[i].set_ylim(0, shape[0]*ps_z)
         else: axs[i].set_ylim(y_min, y_max)
-        #axs[i].set_ylim(0, 20)
-        #axs[i].set_yticks(np.arange(0,101,10))
+
         axs[i].set_xlabel(r'X ($\mu$m)')
         axs[i].set_ylabel(r'AFP ($\mu$m)')
     plt.tight_layout()
@@ -376,7 +379,7 @@ def diel_mean(z,n_im,n_sample,NA): # https://doi.org/10.1038/s41596-020-0360-2
         print("Numerical aperture larger than sample refractive index, Diel mean cannot be computed.")
         return
     sum=0
-    number_of_rays=10 # paper uses 100, but this is still doable.
+    number_of_rays=10000 # paper uses 100, but this is still doable.
     for i in range(number_of_rays):
         k=i+1
         top     =  np.tan(np.arcsin(np.divide((NA*k),(np.multiply(number_of_rays,n_im)))))
