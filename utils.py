@@ -8,7 +8,8 @@ import tifffile
 import matplotlib.pyplot as plt
 import psf_extra as psfe
 
-__all__ = ['plot_int_histograms',
+__all__ = ['plot_overlay_panels',
+            'plot_int_histograms',
            'exp_func',
            'max_rolling2',
            'compensate_int_loss',
@@ -27,6 +28,41 @@ __all__ = ['plot_int_histograms',
            'load_stack']
 
 fire = psfe.get_Daans_special_cmap()
+
+def plot_overlay_panels(theories, stack, stack_rescaled,gt_stack, ps_xy, ps_z, ps_xy_gt, ps_z_gt,rescaled_ps_z,y_min=False,y_max=False ): 
+    colormaps = ['gray','Purples']
+    fig,axs = plt.subplots(1,len(theories))
+    fig.patch.set_facecolor('white')
+    fig.set_figheight(15)
+    fig.set_figwidth(20)
+    shape = np.shape(stack)
+    shape_rescaled = np.shape(stack_rescaled)
+    shape_gt = np.shape(gt_stack)
+    for i in range(len(theories)):
+        theory = theories[i]
+        axs[i].set_title(theories[i])
+        #plot rescaled stack
+        if theory != "Depth-dependent": # linear theory
+            extent = [0, shape[2]*ps_xy, 0, shape[0]*rescaled_ps_z[i]]
+            axs[i].imshow(np.max(stack, axis=2),cmap=colormaps[0],extent=extent,alpha=0.5)
+        else: # depth-dependent!
+            extent = [0, shape[2]*ps_xy, 0, shape_rescaled[0]*ps_z_gt] # ps_z -> rescaled stack has been projected on pixel size of gt stack
+            axs[i].imshow(np.max(np.flip(stack_rescaled,axis=0), axis=2),cmap=colormaps[0],extent=extent,alpha=0.5)
+        
+        # plot GT stack on each panel
+        extent = [0, shape_gt[2]*ps_xy_gt, 0, shape_gt[0]*ps_z_gt]
+        axs[i].imshow(np.max(gt_stack, axis=2),cmap=colormaps[1],extent=extent,alpha=0.5)
+        axs[i].set_xlim(0, shape_gt[2]*ps_xy_gt)
+      #  axs[i].set_xlim(110, 115)
+        if y_max == False: axs[i].set_ylim(0, shape[0]*ps_z)
+        else: axs[i].set_ylim(y_min, y_max)
+        #axs[i].set_ylim(0, 20)
+        #axs[i].set_yticks(np.arange(0,101,10))
+        axs[i].set_xlabel(r'X ($\mu$m)')
+        axs[i].set_ylabel(r'AFP ($\mu$m)')
+    plt.tight_layout()
+    plt.show()
+    return
 
 def plot_int_histograms(stack1,stack2,names):
     stack1_list = stack1.flatten()
