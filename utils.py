@@ -332,7 +332,7 @@ def natural_sort(l):
     return sorted(l, key=alphanum_key)
     
 
-def Lyakin(z,n_sample,n_im,NA):
+def Lyakin(z,n_sample,n_im,NA): # https://doi.org/10.1134/S0030400X17090235
     d = 1
     top = np.add(n_im,np.sqrt(np.subtract(np.power(n_im,2),np.power(NA,2))))
     bottom_1 = np.multiply(4,np.subtract(np.power(n_sample,2),np.power(n_im,2)))
@@ -343,7 +343,7 @@ def Lyakin(z,n_sample,n_im,NA):
     scaling_factor = np.divide(1,dz)    
     return np.zeros(len(z)) + scaling_factor
 
-def stallinga_high(z,nn1,nn2,NA):
+def stallinga_high(z,nn1,nn2,NA): # https://doi.org/10.1364/AO.44.000849
     if nn1==nn2: 
         return np.ones(len(z))
     alphas=[]
@@ -371,7 +371,7 @@ def f1f2_av(nn1,nn2,NA):
             - ((nn1**2-nn2**2)**2)*np.log( ( np.sqrt(nn1**2-NA**2) - np.sqrt(nn2**2-NA**2) )/ (nn1-nn2) ) )/(4*NA**2) )
     return f1f2
 
-def diel_mean(z,n_im,n_sample,NA):
+def diel_mean(z,n_im,n_sample,NA): # https://doi.org/10.1038/s41596-020-0360-2
     if NA > n_sample: 
         print("Numerical aperture larger than sample refractive index, Diel mean cannot be computed.")
         return
@@ -384,7 +384,7 @@ def diel_mean(z,n_im,n_sample,NA):
         sum +=np.divide(top,bottom)
     return np.zeros(len(z)) + np.divide(sum,number_of_rays)
 
-def diel_median(z,n_im,n_sample,NA):
+def diel_median(z,n_im,n_sample,NA): # https://doi.org/10.1038/s41596-020-0360-2
     top = np.tan(np.arcsin(np.divide(0.5*NA,n_im)))
     bottom = np.tan(np.arcsin(np.divide(0.5*NA,n_sample)))
     return np.zeros(len(z)) + np.divide(top,bottom)
