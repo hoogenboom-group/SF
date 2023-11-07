@@ -392,7 +392,7 @@ def diel_median(z,n_im,n_sample,NA): # https://doi.org/10.1038/s41596-020-0360-2
     bottom = np.tan(np.arcsin(np.divide(0.5*NA,n_sample)))
     return np.zeros(len(z)) + np.divide(top,bottom)
 
-def scaling_factor(z, NA,n1,n2,lam_0):
+def scaling_factor(z, NA,n1,n2,lam_0,crit_value='Lyakin'):
     n2overn1 = np.divide(n2,n1)
     
     if n2overn1 < 1: eps = np.multiply(-1,np.divide(np.divide(lam_0,4),(np.multiply(z,n2))))
@@ -404,12 +404,17 @@ def scaling_factor(z, NA,n1,n2,lam_0):
     sf_univ = np.multiply(np.divide(n2,n1),
                           np.divide(1-eps+np.divide(m,n1)*np.emath.sqrt(eps_term),
                                     1-np.multiply(np.divide(n2,n1)**2,eps_term)))
-#     sf_crit = np.divide(n1-np.emath.sqrt(np.power(n1,2)-np.power(NA,2)),
-#                         n2-np.emath.sqrt(np.power(n2,2)-np.power(NA,2)))
-    
-    sf_crit = Lyakin([0],n2,n1,NA)[0]
-    
+
     sf = np.zeros(len(z))
+    if crit_value == 'Lyakin': sf_crit = Lyakin([0],n2,n1,NA)[0]
+    elif crit_value == 'Loginov': 
+        sf_crit = np.divide(n1-np.emath.sqrt(np.power(n1,2)-np.power(NA,2)),
+                                n2-np.emath.sqrt(np.power(n2,2)-np.power(NA,2)))
+    elif crit_value == 'None': 
+        for i in range(len(sf)):
+            sf[i] = np.real(sf_univ[i])
+        return sf
+    
     for i in range(len(sf)):
         if n2overn1 < 1: sf[i] = np.max([np.real(sf_univ[i]),np.real(sf_crit)])
         elif n2overn1 > 1:sf[i] = np.min([np.real(sf_univ[i]),np.real(sf_crit)])
