@@ -58,7 +58,7 @@ def plot_overlay_panels(theories, stack, stack_rescaled,gt_stack, ps_xy, ps_z, p
         if x_max == False: axs[i].set_xlim(0, shape_gt[2]*ps_xy_gt)
         else: axs[i].set_xlim(x_min, x_max)
 
-        if y_max == False: axs[i].set_ylim(0, shape[0]*ps_z)
+        if y_max == False: axs[i].set_ylim(0, shape_gt[0]*ps_z_gt)
         else: axs[i].set_ylim(y_min, y_max)
 
         axs[i].set_xlabel(r'X ($\mu$m)')
