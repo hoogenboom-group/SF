@@ -1,9 +1,32 @@
-from dash import Dash, dcc, html, Input, Output, State
+from dash import Dash, dcc, html, Input, Output, State, ctx
+from dash.exceptions import PreventUpdate
 import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from scipy.interpolate import interp1d
 import pandas as pd
+
+nnns = {"0.85A-A":(0.85, 1.0, 1.0),  
+        "0.85A-W":(0.85, 1.0, 1.33),  
+        "0.85A-O":(0.85, 1.0, 1.51),  
+        "0.95A-A":(0.95, 1.0, 1.0),  
+        "0.95A-W":(0.95, 1.0, 1.33),  
+        "0.95A-O":(0.95, 1.0, 1.51),  
+        "0.7A-A":(0.7, 1.0, 1.0),  
+        "0.7A-W":(0.7, 1.0, 1.33),  
+        "0.7A-O":(0.7, 1.0, 1.51),  
+        "1.4O-O":(1.4, 1.51, 1.51),  
+        "1.4O-W":(1.4, 1.51, 1.33),  
+        "1.4O-A":(1.4, 1.51, 1.0),  
+        "1.25W-W":(1.25, 1.33, 1.33),  
+        "1.25W-O":(1.25, 1.33, 1.51),  
+      }
+mdfs = {nnns[fn]:pd.read_csv(fn+".csv") for fn in nnns.keys()}
+wodfs = {nnns[fn]:pd.read_csv(fn+"_WO.csv") for fn in nnns.keys()}
+namarks = {it+1e-6:f"{it+1e-6:.2f}" for it in np.arange(0.1,1.7,0.2)}
+n1marks = {it+1e-6:f"{it+1e-6:.2f}" for it in np.arange(1,1.52,0.1)}
+n2marks = {it+1e-6:f"{it+1e-6:.2f}" for it in np.arange(1,1.52,0.1)}
+lambdamarks = {it+1e-6:f"{it+1e-6:.2f}" for it in np.arange(0.2,0.95,0.1)}
 
 app = Dash(__name__)
 
@@ -14,49 +37,56 @@ app.layout = html.Div(
             html.Div([
                 html.P("Adjust sliders to set plot parameters"),
                 html.Div([ html.Label("Numerical aperture"),
-                           dcc.Slider(min=0.1, max=1.5, step=0.05, marks={it:f"{it:.2f}" for it in np.arange(0.1,1.7,0.2)}, value=0.85, id='na-slider')
+                           html.Div([dcc.Slider(min=0.1, max=1.5, step=0.05, marks=namarks, value=0.85, id='na-slider'), dcc.Input(id='na-input', min=0.1, max=1.5, type='number', value=0.85)], style={"display": "grid", "grid-template-columns": "85% 15%"}),
                          ], className="rows"),
                 html.Div([ html.Br(),
                            html.Label("Immersion refractive index (n1)"),
-                           dcc.Slider(min=1, max=1.52, step=0.01, marks={it:f"{it:.2f}" for it in np.arange(1,1.52,0.1)}, value=1, id='n1-slider'),
+                           html.Div([dcc.Slider(min=1, max=1.52, step=0.01, marks=n1marks, value=1, id='n1-slider'), dcc.Input(id='n1-input', min=1, max=1.52, type='number', value=1)], style={"display": "grid", "grid-template-columns": "85% 15%"}),
                          ], className="rows"),
                 html.Div([ html.Br(),
                            html.Label("Sample refractive index (n2)"),
-                           dcc.Slider(min=1, max=1.52, step=0.01, marks={it:f"{it:.2f}" for it in np.arange(1,1.52,0.1)}, value=1.33, id='n2-slider'),
+                           html.Div([dcc.Slider(min=1, max=1.52, step=0.01, marks=n2marks, value=1.33, id='n2-slider'), dcc.Input(id='n2-input', min=1, max=1.52,type='number', value=1.33)], style={"display": "grid", "grid-template-columns": "85% 15%"}),
                          ], className="rows"),
                 html.Div([ html.Br(),
                            html.Label("Wavelength [um]"),
-                           dcc.Slider(min=0.2, max=0.9, step=0.01, marks={it:f"{it:.2f}" for it in np.arange(0.2,0.95,0.05)}, value=0.51, id='lambda-slider')
+                           html.Div([dcc.Slider(min=0.2, max=0.9, step=0.01, marks=lambdamarks, value=0.51, id='lambda-slider'), dcc.Input(id='lambda-input', min=0.2, max=0.9, type='number', value=0.51)], style={"display": "grid", "grid-template-columns": "85% 15%"}),
                          ], className="rows"),
-                html.Div([ html.Br(),
-                           html.Div([
-                               html.Label("Show:"),
-                               html.Button('All', id='all-btn', n_clicks=0),
-                               html.Div([
-                               #html.Br(),
-                               dcc.Checklist(options=[
+                html.Div([  html.Br(),
+                            html.Div([
+                                html.Label("Show:"),
+                                html.Button('All', id='all-btn', n_clicks=0),
+                                html.Div([
+                                    dcc.Checklist(options=[
                                            {'label': 'Focal shift', 'value': 'FS'},
-                                           {'label': 'Carlsson', 'value': 'C'},
+                                           {'label': 'Carlsson [1]', 'value': 'C'},
                                            #{'label': 'Visser', 'value': 'V'},
-                                           {'label': 'Diel (median)', 'value': 'DMED'},
-                                           {'label': 'Diel (mean)', 'value': 'DMEA'},
-                                           {'label': 'Stallinga', 'value': 'S'},
-                                           {'label': 'Lyakin', 'value': 'L'},
-                                          ],
-                                          value=[], id='checklist'
-                               ),
-                            ]),
-                           ], className="four columns"),
-                           html.Div([
-                            html.Br(),
-                            html.Button("Download CSV data", id="btn_csv"),
-                            dcc.Download(id="download-dataframe-csv"),
-                            html.Div([html.Br(),
-                            html.A(html.Button('Reset plot'),href='/')]),
-                            html.Div([html.Br(),
-                            html.A(html.Button("GitHub repository"), href="https://github.com/hoogenboom-group/SF", target="_blank")]),
-                           ], className="four columns"),
-                         ], className="rows"),
+                                           {'label': 'Diel (median) [2]', 'value': 'DMED'},
+                                           {'label': 'Diel (mean) [2]', 'value': 'DMEA'},
+                                           {'label': 'Stallinga [3]', 'value': 'S'},
+                                           {'label': 'Lyakin [4]', 'value': 'L'},
+                                           ],
+                                          value=[], id='checklist'),
+                                ]),
+                                html.Div([
+                                    html.Span(["References: ", html.A('[1]', href="https://doi.org/10.1111/j.1365-2818.1991.tb03169.x", target="_blank"), ", ",
+                                                               html.A('[2]', href="https://doi.org/10.1038/s41596-020-0360-2", target="_blank"), ", ",
+                                                               html.A('[3]', href="https://doi.org/10.1364/AO.44.000849", target="_blank"), ", ",
+                                                               html.A('[4]', href="https://doi.org/10.1134/S0030400X17090235", target="_blank")
+                                    ]),
+                                ]),
+                            ], className="four columns"),
+                            html.Div([
+                                html.Br(),
+                                html.Button("Download CSV data", id="btn_csv"),
+                                dcc.Download(id="download-dataframe-csv"),
+                                html.Div([html.Br(),
+                                    html.A(html.Button('Reset plot'),href='/')]),
+                                html.Div([html.Br(),
+                                    html.A(html.Button("GitHub repository"), href="https://github.com/hoogenboom-group/SF", target="_blank")]),
+                                html.Div([html.Br(),
+                                    html.Div([html.Label("Measurements:"), dcc.Slider(min=0, max=1, step=1, marks={0:"0", 1:"1"}, value=0, id='meas-toggle')], style={"display": "grid", "grid-template-columns": "100px 80px"})]), # labelPosition='bottom'
+                            ], className="rows"),
+                        ]),
             ], className="five columns"),
             html.Div([
                 dcc.Graph(id="graph",style={'height': '90vh'}, config = {'displayModeBar': True}),
@@ -179,11 +209,12 @@ def sergey_analytical_sf(NA, n1, n2, lambda0):
     State('n1-slider', 'value'),
     State('n2-slider', 'value'),
     State('na-slider', 'value'),
-    State('checklist', 'value')],
+    State('checklist', 'value'),
+    State('meas-toggle', 'value')],
     prevent_initial_call=True,
     )
-def func(n_clicks, lamb, n1, n2, NA, chks):
-    fig, _ = display_graph(lamb, n1, n2, NA, chks)
+def func(n_clicks, lamb, n1, n2, NA, chks, meastoggle):
+    fig, _ = display_graph(lamb, n1, n2, NA, chks, meastoggle)
     df = pd.DataFrame({d.name:pd.Series(d.y, index=d.x) for d in fig['data']})
     df.index.name = 'Depth [um]'
     return dcc.send_data_frame(df.to_csv, "Re-scaling factor.csv")
@@ -200,6 +231,26 @@ def update_output(n_clicks, chks):
     if set(all) == set(chks): return []
     else: return all
 
+@app.callback([
+    Output('lambda-slider', 'marks'),
+    Output('n1-slider', 'marks'),
+    Output('n2-slider', 'marks'),
+    Output('na-slider', 'marks')],
+    [Input('meas-toggle', 'value'),
+     State('checklist', 'value')],
+    prevent_initial_call=True
+)
+def show_meas(toggle, chks):
+    if toggle:
+        lm = {0.51:"0.51"}
+        n1m = {it+1e-6:f"{it+1e-6:.2f}" for it in set([k[1] for k in mdfs.keys()])}
+        n2m = {it+1e-6:f"{it+1e-6:.2f}" for it in set([k[2] for k in mdfs.keys()])}
+        nam = {it+1e-6:f"{it+1e-6:.2f}" for it in set([k[0] for k in mdfs.keys()])}
+        ret = (lm, n1m, n2m, nam)
+    else: 
+        ret = (lambdamarks, n1marks, n2marks, namarks)
+    return ret
+
 @app.callback(
     [Output("graph", "figure"),
      Output("na-slider", "max"),
@@ -208,8 +259,9 @@ def update_output(n_clicks, chks):
     Input('n1-slider', 'value'),
     Input('n2-slider', 'value'),
     Input('na-slider', 'value'),
-    Input('checklist', 'value')])
-def display_graph(lamb, n1, n2, NA, chks):
+    Input('checklist', 'value'),
+    Input('meas-toggle', 'value')])
+def display_graph(lamb, n1, n2, NA, chks, meastoggle):
     #if "ALL" in chks: chks = ["FS", "C", "L", "DMED", "DMEA", "S", ] #"V"
     z, sf, sf_crit, n2overn1 = scaling_factor(NA, n1, n2, lamb)
     z = np.insert(z, 0, [0])
@@ -218,8 +270,10 @@ def display_graph(lamb, n1, n2, NA, chks):
     fs = z*(1/sf-1)
     fig = make_subplots(specs=[[{"secondary_y": True}]])
 
+    df_key = (round(NA, 2), round(n1, 2), round(n2, 2))
+
     fig.add_trace(
-        go.Line(x=z, y=sf, name="Axial re-scaling factor"),
+        go.Line(x=z, y=sf, name="Axial re-scaling factor", line_color = 'blue'),
         secondary_y=False,
     )
     if "FS" in chks:
@@ -235,6 +289,83 @@ def display_graph(lamb, n1, n2, NA, chks):
             go.Scatter(x=z, y=z*(1/diel_median(z,n1,n2,NA)-1), name='Focal shift (Diel, median) [um]', line = dict(color='black', dash='dot')),
             secondary_y=True,
         )
+        if meastoggle and lamb == 0.51:
+            try:
+                df = mdfs[df_key]
+            except KeyError:
+                pass
+            else:
+                mfs = df['idx']*(1/df['mean_val']-1)
+                fsstd = (df['idx']*(1/df['std_down']-1) - mfs)*3
+                fig.add_trace(go.Scatter(
+                    name='FS Mean',
+                    x=df['idx'].values[::5],
+                    y=mfs.values[::5],
+                    mode='markers',
+                    line=dict(color='black'),
+                ), secondary_y=True)
+                fig.add_trace(go.Scatter(
+                    name='FS+3S',
+                    x=df['idx'],
+                    y=mfs+fsstd,
+                    mode='lines',
+                    marker=dict(color='black'),
+                    line=dict(width=0),
+                    showlegend=False
+                ), secondary_y=True)
+                fig.add_trace(go.Scatter(
+                    name='FS-3S',
+                    x=df['idx'],
+                    y=mfs-fsstd,
+                    marker=dict(color='black'),
+                    line=dict(width=0),
+                    fillcolor='rgba(0, 0, 0, 0.1)',
+                    mode='lines',
+                    fill='tonexty',
+                    showlegend=True
+                ), secondary_y=True)
+
+        
+    if meastoggle and lamb == 0.51:
+        try:
+            df = mdfs[df_key]
+            wodf = wodfs[df_key]
+        except KeyError:
+            pass
+        else: 
+            fig.add_trace(go.Scatter(
+                name='Wave optics',
+                x=wodf.A.values,
+                y=(wodf.A.values / wodf.N2.values),
+                line=dict(color='blue', dash='dash'),
+            ), secondary_y=False)
+            fig.add_trace(go.Scatter(
+                name='Mean',
+                x=df['idx'].values[::5],
+                y=df['mean_val'].values[::5],
+                mode='markers',
+                line=dict(color='blue'),
+            ), secondary_y=False)
+            fig.add_trace(go.Scatter(
+                name='+3S',
+                x=df['idx'],
+                y=df['mean_val'] + (df['std_down'] - df['mean_val'])*3,
+                mode='lines',
+                marker=dict(color="rgba(0, 0, 255, 0.3)"),
+                line=dict(width=0),
+                showlegend=False
+            ), secondary_y=False)
+            fig.add_trace(go.Scatter(
+                name='-3S',
+                x=df['idx'],
+                y=df['mean_val'] - (df['std_down'] - df['mean_val'])*3,
+                marker=dict(color="rgba(0, 0, 255, 0.3)"),
+                line=dict(width=0),
+                fillcolor='rgba(0, 0, 255, 0.1)',
+                mode='lines',
+                fill='tonexty',
+                showlegend=True
+            ), secondary_y=False)
     
     yma2 = fs[190]
     
@@ -300,6 +431,50 @@ def display_graph(lamb, n1, n2, NA, chks):
                     )
     )
     return fig, n1
+
+@app.callback(
+    Output("na-input", "value"),
+    Output("na-slider", "value"),
+    Input("na-input", "value"),
+    Input("na-slider", "value"),
+)
+def na_callback(input_value, slider_value):
+    trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
+    value = input_value if trigger_id == "na-input" else slider_value
+    return value, value
+
+@app.callback(
+    Output("n1-input", "value"),
+    Output("n1-slider", "value"),
+    Input("n1-input", "value"),
+    Input("n1-slider", "value"),
+)
+def n1_callback(input_value, slider_value):
+    trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
+    value = input_value if trigger_id == "n1-input" else slider_value
+    return value, value
+    
+@app.callback(
+    Output("n2-input", "value"),
+    Output("n2-slider", "value"),
+    Input("n2-input", "value"),
+    Input("n2-slider", "value"),
+)
+def n2_callback(input_value, slider_value):
+    trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
+    value = input_value if trigger_id == "n2-input" else slider_value
+    return value, value
+    
+@app.callback(
+    Output("lambda-input", "value"),
+    Output("lambda-slider", "value"),
+    Input("lambda-input", "value"),
+    Input("lambda-slider", "value"),
+)
+def lambda_callback(input_value, slider_value):
+    trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
+    value = input_value if trigger_id == "lambda-input" else slider_value
+    return value, value
 
 if __name__ == "__main__":
     app.run_server(debug=True) #

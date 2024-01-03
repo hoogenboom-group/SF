@@ -287,8 +287,8 @@ select:focus {
   outline: 0; }
 label,
 legend {
-  display: block;
-  margin-bottom: 0px; }
+  display: block; 
+  margin-bottom: 2px; }
 fieldset {
   padding: 0;
   border-width: 0; }
