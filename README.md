@@ -20,7 +20,7 @@ Created by Ernest van der Wee, Daan Boltje
 
 - Plotting of Figures 9 and 12 in Loginov et al.:
 
-  rescaling_of_microscopy_data/error_theories.ipynb
+  rescaling_of_microscopy_data/error_theories_manuscrpipt.ipynb
 
 - Re-scaling and plotting of Figures 10 and 13 in Loginov et al.:
 
