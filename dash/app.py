@@ -6,23 +6,23 @@ from plotly.subplots import make_subplots
 from scipy.interpolate import interp1d
 import pandas as pd
 
-nnns = {"0.85A-A":(0.85, 1.0, 1.0),  
-        "0.85A-W":(0.85, 1.0, 1.33),  
-        "0.85A-O":(0.85, 1.0, 1.51),  
-        "0.95A-A":(0.95, 1.0, 1.0),  
-        "0.95A-W":(0.95, 1.0, 1.33),  
-        "0.95A-O":(0.95, 1.0, 1.51),  
-        "0.7A-A":(0.7, 1.0, 1.0),  
-        "0.7A-W":(0.7, 1.0, 1.33),  
-        "0.7A-O":(0.7, 1.0, 1.51),  
-        "1.4O-O":(1.4, 1.51, 1.51),  
-        "1.4O-W":(1.4, 1.51, 1.33),  
-        "1.4O-A":(1.4, 1.51, 1.0),  
-        "1.25W-W":(1.25, 1.33, 1.33),  
-        "1.25W-O":(1.25, 1.33, 1.51),  
+nnns = {"0.85A-A":(0.85, 1.0, 1.0),
+        "0.85A-W":(0.85, 1.0, 1.33),
+        "0.85A-O":(0.85, 1.0, 1.51),
+        "0.95A-A":(0.95, 1.0, 1.0),
+        "0.95A-W":(0.95, 1.0, 1.33),
+        "0.95A-O":(0.95, 1.0, 1.51),
+        "0.7A-A":(0.7, 1.0, 1.0),
+        "0.7A-W":(0.7, 1.0, 1.33),
+        "0.7A-O":(0.7, 1.0, 1.51),
+        "1.4O-O":(1.4, 1.51, 1.51),
+        "1.4O-W":(1.4, 1.51, 1.33),
+        "1.4O-A":(1.4, 1.51, 1.0),
+        "1.25W-W":(1.25, 1.33, 1.33),
+        "1.25W-O":(1.25, 1.33, 1.51),
       }
-mdfs = {nnns[fn]:pd.read_csv(fn+".csv") for fn in nnns.keys()}
-wodfs = {nnns[fn]:pd.read_csv(fn+"_WO.csv") for fn in nnns.keys()}
+mdfs = {nnns[fn]:pd.read_csv("/home/axialscaling/mysite/"+fn+".csv") for fn in nnns.keys()}
+wodfs = {nnns[fn]:pd.read_csv("/home/axialscaling/mysite/"+fn+"_WO.csv") for fn in nnns.keys()}
 namarks = {it+1e-6:f"{it+1e-6:.2f}" for it in np.arange(0.1,1.7,0.2)}
 n1marks = {it+1e-6:f"{it+1e-6:.2f}" for it in np.arange(1,1.52,0.1)}
 n2marks = {it+1e-6:f"{it+1e-6:.2f}" for it in np.arange(1,1.52,0.1)}
@@ -30,9 +30,14 @@ lambdamarks = {it+1e-6:f"{it+1e-6:.2f}" for it in np.arange(0.2,0.95,0.1)}
 
 app = Dash(__name__)
 
+app.css.append_css({
+    "external_url": "https://axialscaling.pythonanywhere.com/static/bWLwgP.css" #
+})
+
 app.layout = html.Div(
     [
-        html.H4("Re-scaling factor"),
+        html.H4("Depth-dependent scaling of axial distances in light microscopy"),
+        html.H6(dcc.Markdown("Accompanying manuscript: [link to manuscript](https://doi.org/10.1101/2024.01.31.578242)")),
         html.Div([
             html.Div([
                 html.P("Adjust sliders to set plot parameters"),
@@ -50,6 +55,9 @@ app.layout = html.Div(
                 html.Div([ html.Br(),
                            html.Label("Wavelength [um]"),
                            html.Div([dcc.Slider(min=0.2, max=0.9, step=0.01, marks=lambdamarks, value=0.51, id='lambda-slider'), dcc.Input(id='lambda-input', min=0.2, max=0.9, type='number', value=0.51)], style={"display": "grid", "grid-template-columns": "85% 15%"}),
+                         ], className="rows"),
+                html.Div([ html.Br(),
+                           html.Div([html.Label("Critical re-scaling factor: "), dcc.RadioItems(options={'Loginov': 'Loginov    ', 'Lyakin': 'Lyakin', }, value='Loginov', id='crit-val-radio', inline=True)], style={"display": "grid", "grid-template-columns": "25% 50%"}),
                          ], className="rows"),
                 html.Div([  html.Br(),
                             html.Div([
@@ -95,9 +103,7 @@ app.layout = html.Div(
     ]
 )
 
-
-def scaling_factor(NA,n1,n2,lam_0):
-    z = np.append(np.arange(lam_0,10,0.1), [np.arange(10,100,1), np.arange(100,1000,10), np.arange(1000,10000,100)]) # np.arange(0.1,10,0.1)
+def scaling_factor(z, NA,n1,n2,lam_0,crit_value='Lyakin'):
     n2overn1 = np.divide(n2,n1)
 
     if n2overn1 < 1: eps = np.multiply(-1,np.divide(np.divide(lam_0,4),(np.multiply(z,n2))))
@@ -109,20 +115,50 @@ def scaling_factor(NA,n1,n2,lam_0):
     sf_univ = np.multiply(np.divide(n2,n1),
                           np.divide(1-eps+np.divide(m,n1)*np.emath.sqrt(eps_term),
                                     1-np.multiply(np.divide(n2,n1)**2,eps_term)))
-    sf_crit = np.divide(n1-np.emath.sqrt(np.power(n1,2)-np.power(NA,2)),
-                        n2-np.emath.sqrt(np.power(n2,2)-np.power(NA,2)))
 
     sf = np.zeros(len(z))
+    if crit_value == 'Lyakin': sf_crit = Lyakin([0],n2,n1,NA)[0]
+    elif crit_value == 'Loginov':
+        sf_crit = np.divide(n1-np.emath.sqrt(np.power(n1,2)-np.power(NA,2)),
+                                n2-np.emath.sqrt(np.power(n2,2)-np.power(NA,2)))
+    elif crit_value == 'None':
+        for i in range(len(sf)):
+            sf[i] = np.real(sf_univ[i])
+        return sf
+
     for i in range(len(sf)):
         if n2overn1 < 1: sf[i] = np.max([np.real(sf_univ[i]),np.real(sf_crit)])
         elif n2overn1 > 1:sf[i] = np.min([np.real(sf_univ[i]),np.real(sf_crit)])
         else: sf[i]=1
-    return z,sf,sf_crit,n2overn1
+    return sf
+
+# def scaling_factor(NA,n1,n2,lam_0):
+#     z = np.append(np.arange(lam_0,10,0.1), [np.arange(10,100,1), np.arange(100,1000,10), np.arange(1000,10000,100)]) # np.arange(0.1,10,0.1)
+#     n2overn1 = np.divide(n2,n1)
+
+#     if n2overn1 < 1: eps = np.multiply(-1,np.divide(np.divide(lam_0,4),(np.multiply(z,n2))))
+#     else: eps = np.divide(np.divide(lam_0,4),(np.multiply(z,n2)))
+#     eps_term = np.multiply(eps, np.subtract(2,eps))
+
+#     m = np.emath.sqrt(np.subtract(np.power(n2,2),np.power(n1,2)))
+
+#     sf_univ = np.multiply(np.divide(n2,n1),
+#                           np.divide(1-eps+np.divide(m,n1)*np.emath.sqrt(eps_term),
+#                                     1-np.multiply(np.divide(n2,n1)**2,eps_term)))
+#     sf_crit = np.divide(n1-np.emath.sqrt(np.power(n1,2)-np.power(NA,2)),
+#                         n2-np.emath.sqrt(np.power(n2,2)-np.power(NA,2)))
+
+#     sf = np.zeros(len(z))
+#     for i in range(len(sf)):
+#         if n2overn1 < 1: sf[i] = np.max([np.real(sf_univ[i]),np.real(sf_crit)])
+#         elif n2overn1 > 1:sf[i] = np.min([np.real(sf_univ[i]),np.real(sf_crit)])
+#         else: sf[i]=1
+#     return z,sf,sf_crit,n2overn1
 
 def Carlsson(z,n2overn1):
     return np.zeros(len(z)) + n2overn1
 
-def Lyakin(z,n_sample,n_im,NA):
+def Lyakin(z,n_sample,n_im,NA): # https://doi.org/10.1134/S0030400X17090235
     d = 1
     top = np.add(n_im,np.sqrt(np.subtract(np.power(n_im,2),np.power(NA,2))))
     bottom_1 = np.multiply(4,np.subtract(np.power(n_sample,2),np.power(n_im,2)))
@@ -139,7 +175,10 @@ def visser(z,n_sample,n_im,NA):
     sf = np.divide(top,bottom)
     return np.zeros(len(z)) + sf
 
-def diel_mean(z,n_im,n_sample,NA):
+def diel_mean(z,n_im,n_sample,NA): # https://doi.org/10.1038/s41596-020-0360-2
+    if NA > n_sample:
+        print("Numerical aperture larger than sample refractive index, Diel mean cannot be computed.")
+        return
     sum=0
     number_of_rays=10000 # paper uses 100, but this is still doable.
     for i in range(number_of_rays):
@@ -149,12 +188,12 @@ def diel_mean(z,n_im,n_sample,NA):
         sum +=np.divide(top,bottom)
     return np.zeros(len(z)) + np.divide(sum,number_of_rays)
 
-def diel_median(z,n_im,n_sample,NA):
+def diel_median(z,n_im,n_sample,NA): # https://doi.org/10.1038/s41596-020-0360-2
     top = np.tan(np.arcsin(np.divide(0.5*NA,n_im)))
     bottom = np.tan(np.arcsin(np.divide(0.5*NA,n_sample)))
     return np.zeros(len(z)) + np.divide(top,bottom)
 
-def stallinga_high(z,nn1,nn2,NA):
+def stallinga_high(z,nn1,nn2,NA): # https://doi.org/10.1364/AO.44.000849
     if nn1==nn2:
         return np.ones(len(z))
     alphas=[]
@@ -182,25 +221,25 @@ def f1f2_av(nn1,nn2,NA):
             - ((nn1**2-nn2**2)**2)*np.log( ( np.sqrt(nn1**2-NA**2) - np.sqrt(nn2**2-NA**2) )/ (nn1-nn2) ) )/(4*NA**2) )
     return f1f2
 
-def sergey_analytical_sf(NA, n1, n2, lambda0):
-    z_a = np.append(np.arange(0.5, 100, 0.1), 1000000)
-    if n2 > n1:
-        m = np.sqrt(n2**2 - n1**2)
-    else:
-        m = np.sqrt(n1**2 - n2**2)
-    epsilon = (lambda0/4) / (z_a * n2)
-    if n2 > n1:
-        xi_univ = (n2/n1) * ((1-epsilon) + (m/n1**2) * np.sqrt(2*epsilon - epsilon**2)) / (1-(n2/n1)**2 *epsilon * (2-epsilon))
-        xi_crit = (n1 - np.sqrt(n1**2 - NA**2)) / (n2 - np.sqrt(n2**2 - NA**2))
-        condi = np.where(xi_univ < xi_crit)
-        if condi[0].size > 0:
-            idx = condi[0][0]
-            xi_univ[:idx] = xi_crit
-    else:
-        xi_univ = (n2/n1) * 1/(((1-epsilon) + (m/n1**2) * np.sqrt(2*epsilon - epsilon**2)) / (1-(n2/n1)**2 *epsilon * (2-epsilon)))
-    f = interp1d(z_a, xi_univ, fill_value="extrapolate", kind="slinear")
-    z_a = np.arange(lambda0, 100, 0.1)
-    return z_a, f(z_a)
+# def sergey_analytical_sf(NA, n1, n2, lambda0):
+#     z_a = np.append(np.arange(0.5, 100, 0.1), 1000000)
+#     if n2 > n1:
+#         m = np.sqrt(n2**2 - n1**2)
+#     else:
+#         m = np.sqrt(n1**2 - n2**2)
+#     epsilon = (lambda0/4) / (z_a * n2)
+#     if n2 > n1:
+#         xi_univ = (n2/n1) * ((1-epsilon) + (m/n1**2) * np.sqrt(2*epsilon - epsilon**2)) / (1-(n2/n1)**2 *epsilon * (2-epsilon))
+#         xi_crit = (n1 - np.sqrt(n1**2 - NA**2)) / (n2 - np.sqrt(n2**2 - NA**2))
+#         condi = np.where(xi_univ < xi_crit)
+#         if condi[0].size > 0:
+#             idx = condi[0][0]
+#             xi_univ[:idx] = xi_crit
+#     else:
+#         xi_univ = (n2/n1) * 1/(((1-epsilon) + (m/n1**2) * np.sqrt(2*epsilon - epsilon**2)) / (1-(n2/n1)**2 *epsilon * (2-epsilon)))
+#     f = interp1d(z_a, xi_univ, fill_value="extrapolate", kind="slinear")
+#     z_a = np.arange(lambda0, 100, 0.1)
+#     return z_a, f(z_a)
 
 @app.callback(
     Output("download-dataframe-csv", "data"),
@@ -210,11 +249,12 @@ def sergey_analytical_sf(NA, n1, n2, lambda0):
     State('n2-slider', 'value'),
     State('na-slider', 'value'),
     State('checklist', 'value'),
-    State('meas-toggle', 'value')],
+    State('meas-toggle', 'value'),
+    Input('crit-val-radio', 'value')],
     prevent_initial_call=True,
     )
 def func(n_clicks, lamb, n1, n2, NA, chks, meastoggle):
-    fig, _ = display_graph(lamb, n1, n2, NA, chks, meastoggle)
+    fig, _ = display_graph(lamb, n1, n2, NA, chks, meastoggle, critval)
     df = pd.DataFrame({d.name:pd.Series(d.y, index=d.x) for d in fig['data']})
     df.index.name = 'Depth [um]'
     return dcc.send_data_frame(df.to_csv, "Re-scaling factor.csv")
@@ -247,7 +287,7 @@ def show_meas(toggle, chks):
         n2m = {it+1e-6:f"{it+1e-6:.2f}" for it in set([k[2] for k in mdfs.keys()])}
         nam = {it+1e-6:f"{it+1e-6:.2f}" for it in set([k[0] for k in mdfs.keys()])}
         ret = (lm, n1m, n2m, nam)
-    else: 
+    else:
         ret = (lambdamarks, n1marks, n2marks, namarks)
     return ret
 
@@ -260,14 +300,16 @@ def show_meas(toggle, chks):
     Input('n2-slider', 'value'),
     Input('na-slider', 'value'),
     Input('checklist', 'value'),
-    Input('meas-toggle', 'value')])
-def display_graph(lamb, n1, n2, NA, chks, meastoggle):
+    Input('meas-toggle', 'value'),
+    Input('crit-val-radio', 'value')])
+def display_graph(lamb, n1, n2, NA, chks, meastoggle, critval):
     #if "ALL" in chks: chks = ["FS", "C", "L", "DMED", "DMEA", "S", ] #"V"
-    z, sf, sf_crit, n2overn1 = scaling_factor(NA, n1, n2, lamb)
+    z = np.append(np.arange(lamb,10,0.1), [np.arange(10,100,1), np.arange(100,1000,10), np.arange(1000,10000,100)])
+    sf = scaling_factor(z, NA, n1, n2, lamb, critval)
     z = np.insert(z, 0, [0])
     sf = np.insert(sf, 0, [sf[0]])
     ymi, yma = min(sf), max(sf)
-    fs = z*(1/sf-1)
+    fs = z*(1-1/sf)
     fig = make_subplots(specs=[[{"secondary_y": True}]])
 
     df_key = (round(NA, 2), round(n1, 2), round(n2, 2))
@@ -282,11 +324,11 @@ def display_graph(lamb, n1, n2, NA, chks, meastoggle):
             secondary_y=True,
         )
         fig.add_trace(
-            go.Scatter(x=z, y=z*(1/Lyakin(z,n2,n1,NA)-1), name='Focal shift (Lyakin) [um]', line = dict(color='black', dash='dash')),
+            go.Scatter(x=z, y=z*(1-1/Lyakin(z,n2,n1,NA)), name='Focal shift (Lyakin) [um]', line = dict(color='black', dash='dash')),
             secondary_y=True,
         )
         fig.add_trace(
-            go.Scatter(x=z, y=z*(1/diel_median(z,n1,n2,NA)-1), name='Focal shift (Diel, median) [um]', line = dict(color='black', dash='dot')),
+            go.Scatter(x=z, y=z*(1-1/diel_median(z,n1,n2,NA)), name='Focal shift (Diel, median) [um]', line = dict(color='black', dash='dot')),
             secondary_y=True,
         )
         if meastoggle and lamb == 0.51:
@@ -325,14 +367,14 @@ def display_graph(lamb, n1, n2, NA, chks, meastoggle):
                     showlegend=True
                 ), secondary_y=True)
 
-        
+
     if meastoggle and lamb == 0.51:
         try:
             df = mdfs[df_key]
             wodf = wodfs[df_key]
         except KeyError:
             pass
-        else: 
+        else:
             fig.add_trace(go.Scatter(
                 name='Wave optics',
                 x=wodf.A.values,
@@ -341,24 +383,24 @@ def display_graph(lamb, n1, n2, NA, chks, meastoggle):
             ), secondary_y=False)
             fig.add_trace(go.Scatter(
                 name='Mean',
-                x=df['idx'].values[::5],
-                y=df['mean_val'].values[::5],
+                x=df['idx'].values,
+                y=df['mean_val'].values,
                 mode='markers',
                 line=dict(color='blue'),
             ), secondary_y=False)
             fig.add_trace(go.Scatter(
-                name='+3S',
+                name='error',
                 x=df['idx'],
-                y=df['mean_val'] + (df['std_down'] - df['mean_val'])*3,
+                y=df['std_up'],
                 mode='lines',
                 marker=dict(color="rgba(0, 0, 255, 0.3)"),
                 line=dict(width=0),
                 showlegend=False
             ), secondary_y=False)
             fig.add_trace(go.Scatter(
-                name='-3S',
+                name='error',
                 x=df['idx'],
-                y=df['mean_val'] - (df['std_down'] - df['mean_val'])*3,
+                y=df['std_down'],
                 marker=dict(color="rgba(0, 0, 255, 0.3)"),
                 line=dict(width=0),
                 fillcolor='rgba(0, 0, 255, 0.1)',
@@ -366,9 +408,9 @@ def display_graph(lamb, n1, n2, NA, chks, meastoggle):
                 fill='tonexty',
                 showlegend=True
             ), secondary_y=False)
-    
+
     yma2 = fs[190]
-    
+
     if "C" in chks:
         y = Carlsson(z,n2overn1)
         fig.add_trace(
@@ -453,7 +495,7 @@ def n1_callback(input_value, slider_value):
     trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
     value = input_value if trigger_id == "n1-input" else slider_value
     return value, value
-    
+
 @app.callback(
     Output("n2-input", "value"),
     Output("n2-slider", "value"),
@@ -464,7 +506,7 @@ def n2_callback(input_value, slider_value):
     trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
     value = input_value if trigger_id == "n2-input" else slider_value
     return value, value
-    
+
 @app.callback(
     Output("lambda-input", "value"),
     Output("lambda-slider", "value"),
@@ -476,5 +518,5 @@ def lambda_callback(input_value, slider_value):
     value = input_value if trigger_id == "lambda-input" else slider_value
     return value, value
 
-if __name__ == "__main__":
-    app.run_server(debug=True) #
+#if __name__ == "__main__":
+#    app.run_server() #
