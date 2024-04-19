@@ -1,6 +1,6 @@
 # Depth-dependent re-scaling factor
 
-Software supporting "Depth-dependent scaling of axial distances in light microscopy"  by Loginov et al. - https://doi.org/10.1101/2024.01.31.578242
+Software supporting "Depth-dependent scaling of axial distances in light microscopy"  by Loginov et al. - https://doi.org/10.1364/OPTICA.520595
 
 Created by Ernest van der Wee, Daan Boltje, Sergey Loginov
 
