@@ -36,8 +36,8 @@ app.css.append_css({
 
 app.layout = html.Div(
     [
-        html.H4("Depth-dependent scaling of axial distances in light microscopy"),
-        html.H6(dcc.Markdown("Accompanying manuscript: [link to manuscript](https://doi.org/10.1364/OPTICA.520595)")),
+        html.H4(dcc.Markdown("[Depth-dependent scaling of axial distances in light microscopy](https://doi.org/10.1101/2024.01.31.578242)")),
+        html.H6("Sergey Loginov, Daan Boltje, Myron Hensgens, Jacob Hoogenboom, and Ernest van der Wee"),
         html.Div([
             html.Div([
                 html.P("Adjust sliders to set plot parameters"),
@@ -57,7 +57,7 @@ app.layout = html.Div(
                            html.Div([dcc.Slider(min=0.2, max=0.9, step=0.01, marks=lambdamarks, value=0.51, id='lambda-slider'), dcc.Input(id='lambda-input', min=0.2, max=0.9, type='number', value=0.51)], style={"display": "grid", "grid-template-columns": "85% 15%"}),
                          ], className="rows"),
                 html.Div([ html.Br(),
-                           html.Div([html.Label("Critical re-scaling factor: "), dcc.RadioItems(options={'Loginov': 'Loginov    ', 'Lyakin': 'Lyakin', }, value='Loginov', id='crit-val-radio', inline=True)], style={"display": "grid", "grid-template-columns": "25% 50%"}),
+                           html.Div([html.Label("Critical re-scaling factor: "), dcc.RadioItems(options={'Loginov': 'Loginov    ', 'Lyakin': 'Lyakin', }, value='Loginov', id='crit-val-radio', inline=True)], style={"display": "grid", "grid-template-columns": "35% 65%"}),
                          ], className="rows"),
                 html.Div([  html.Br(),
                             html.Div([
@@ -97,7 +97,7 @@ app.layout = html.Div(
                         ]),
             ], className="five columns"),
             html.Div([
-                dcc.Graph(id="graph",style={'height': '90vh'}, config = {'displayModeBar': True}),
+                dcc.Graph(id="graph",style={'height': '80vh'}, config = {'displayModeBar': True}),
             ], className="seven columns"),
         ], className="row")
     ]
