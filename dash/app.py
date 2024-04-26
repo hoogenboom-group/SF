@@ -37,7 +37,7 @@ app.css.append_css({
 app.layout = html.Div(
     [
         html.H4("Depth-dependent scaling of axial distances in light microscopy"),
-        html.H6(dcc.Markdown("Accompanying manuscript: [link to manuscript](https://doi.org/10.1101/2024.01.31.578242)")),
+        html.H6(dcc.Markdown("Accompanying manuscript: [link to manuscript](https://doi.org/10.1364/OPTICA.520595)")),
         html.Div([
             html.Div([
                 html.P("Adjust sliders to set plot parameters"),
