@@ -310,6 +310,7 @@ def display_graph(lamb, n1, n2, NA, chks, meastoggle, critval):
     sf = np.insert(sf, 0, [sf[0]])
     ymi, yma = min(sf), max(sf)
     fs = z*(1-1/sf)
+    n2overn1 = n2 / n1
     fig = make_subplots(specs=[[{"secondary_y": True}]])
 
     df_key = (round(NA, 2), round(n1, 2), round(n2, 2))
